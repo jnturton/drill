@@ -16,6 +16,11 @@
 # Note: TravisCI is used only for testing on Linux ARM64
 # The testing on x86_64 is done on Github Actions
 
+# Note (2022-11-03): The ASF will move off of TravisCI at the end of this
+# year. Even though it will have no effect after that event, this TravisCI
+# build config remains in the repository since it might be of interest in the
+# future and it contributes very little cruft. See DRILL-8344.
+
 dist: focal
 language: generic
 sudo: required
