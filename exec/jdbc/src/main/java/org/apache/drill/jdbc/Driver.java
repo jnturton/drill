@@ -49,7 +49,7 @@ public class Driver implements java.sql.Driver {
     try {
       DriverManager.registerDriver(new Driver());
     } catch (Error | SQLException e) {
-      logger.warn("Error in registering Drill JDBC driver {}: {}", Driver.class, e, e);
+      logger.error("Error in registering Drill JDBC driver {}: {}", Driver.class, e, e);
     }
   }
 
