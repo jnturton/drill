@@ -25,9 +25,11 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.util.EnumSet;
 import java.util.Set;
 
+import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.test.QueryBuilder;
 import org.apache.drill.test.TestTools;
 import org.apache.hadoop.hive.ql.Driver;
+import org.apache.hadoop.hive.ql.processors.CommandProcessorException;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.util.ComparableVersion;
 import org.apache.hive.common.util.HiveVersionInfo;
@@ -50,16 +52,10 @@ public class HiveTestUtilities {
    * Execute the give <i>query</i> on given <i>hiveDriver</i> instance.
    */
   public static void executeQuery(Driver hiveDriver, String query) {
-    CommandProcessorResponse response;
     try {
-      response = hiveDriver.run(query);
-    } catch (Exception e) {
-       throw new RuntimeException(e);
-    }
-
-    if (response.getResponseCode() != 0 ) {
-      throw new RuntimeException(String.format("Failed to execute command '%s', errorMsg = '%s'",
-          query, response.getErrorMessage()));
+      hiveDriver.run(query);
+    } catch (CommandProcessorException e) {
+      throw new DrillRuntimeException(String.format("Failed to execute command '%s'", query, e));
     }
   }
 

@@ -57,6 +57,7 @@ import org.apache.drill.exec.vector.NullableVarDecimalVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.work.ExecErrorConstants;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.common.type.HiveDecimal;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Partition;
@@ -582,7 +583,7 @@ public class HiveUtilities {
    */
   public static void verifyAndAddTransactionalProperties(JobConf job, StorageDescriptor sd) {
 
-    if (AcidUtils.isTablePropertyTransactional(job)) {
+    if (AcidUtils.isTablePropertyTransactional(job.getPropsWithPrefix("transactional"))) {
       HiveConf.setBoolVar(job, HiveConf.ConfVars.HIVE_TRANSACTIONAL_TABLE_SCAN, true);
 
       // No work is needed, if schema evolution is used
@@ -594,7 +595,7 @@ public class HiveUtilities {
       String colNames;
       String colTypes;
 
-      // Try to get get column names and types from table or partition properties. If they are absent there, get columns
+      // Try to get column names and types from table or partition properties. If they are absent there, get columns
       // data from storage descriptor of the table
       colNames = job.get(serdeConstants.LIST_COLUMNS);
       colTypes = job.get(serdeConstants.LIST_COLUMN_TYPES);
@@ -748,6 +749,7 @@ public class HiveUtilities {
         .forEach(name -> newHiveConf.set(name, changedProperties.getProperty(name)));
     return newHiveConf;
   }
+
 
   /**
    * Helper method which stores partition columns in table columnListCache. If table columnListCache has exactly the

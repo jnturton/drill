@@ -55,6 +55,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
+import org.apache.hadoop.hive.serde2.AbstractSerDe;
 import org.apache.hadoop.hive.serde2.ColumnProjectionUtils;
 import org.apache.hadoop.hive.serde2.Deserializer;
 import org.apache.hadoop.hive.serde2.SerDeException;
@@ -261,8 +262,9 @@ public class HiveDefaultRecordReader extends AbstractRecordReader {
   private Callable<Void> getInitTask(OutputMutator output) {
     return () -> {
       this.job = new JobConf(hiveConf);
+      Properties partitionProperties = HiveUtilities.getPartitionMetadata(partition, hiveTable);
       Properties hiveTableProperties = HiveUtilities.getTableMetadata(hiveTable);
-      final Deserializer tableDeserializer = createDeserializer(job, hiveTable.getSd(), hiveTableProperties);
+      final Deserializer tableDeserializer = createDeserializer(job, hiveTable.getSd(), hiveTableProperties, partitionProperties);
       final StructObjectInspector tableObjInspector = getStructOI(tableDeserializer);
 
       if (partition == null) {
@@ -275,9 +277,8 @@ public class HiveDefaultRecordReader extends AbstractRecordReader {
         job.setInputFormat(HiveUtilities.getInputFormatClass(job, hiveTable.getSd(), hiveTable));
         HiveUtilities.verifyAndAddTransactionalProperties(job, hiveTable.getSd());
       } else {
-        Properties partitionProperties = HiveUtilities.getPartitionMetadata(partition, hiveTable);
         HiveUtilities.addConfToJob(job, partitionProperties);
-        this.partitionDeserializer = createDeserializer(job, partition.getSd(), partitionProperties);
+        this.partitionDeserializer = createDeserializer(job, partition.getSd(), hiveTableProperties, partitionProperties);
         this.partitionObjInspector = getStructOI(partitionDeserializer);
 
         this.finalObjInspector = (StructObjectInspector) ObjectInspectorConverters.getConvertedOI(partitionObjInspector, tableObjInspector);
@@ -326,7 +327,8 @@ public class HiveDefaultRecordReader extends AbstractRecordReader {
       List<String> nestedColumnPaths = getColumns().stream()
           .map(SchemaPath::getRootSegmentPath)
           .collect(Collectors.toList());
-      ColumnProjectionUtils.appendReadColumns(job, idsOfProjectedColumns, selectedColumnNames, nestedColumnPaths);
+
+      ColumnProjectionUtils.appendReadColumns(job, idsOfProjectedColumns, selectedColumnNames, nestedColumnPaths, false);
 
       // Initialize selectedStructFieldRefs and columnValueWriters, which are two key collections of
       // objects used to read and save columns row data into Drill's value vectors
@@ -345,7 +347,7 @@ public class HiveDefaultRecordReader extends AbstractRecordReader {
       if (partition != null && selectedPartitionColumnNames.size() > 0) {
         List<ValueVector> partitionVectorList = new ArrayList<>(selectedPartitionColumnNames.size());
         List<Object> partitionValueList = new ArrayList<>(selectedPartitionColumnNames.size());
-        String defaultPartitionValue = hiveConf.get(HiveConf.ConfVars.DEFAULTPARTITIONNAME.varname);
+        String defaultPartitionValue = hiveConf.get(HiveConf.ConfVars.DEFAULT_PARTITION_NAME.varname);
         OptionManager options = fragmentContext.getOptions();
         for (int i = 0; i < partitionKeyFields.size(); i++) {
           FieldSchema field = partitionKeyFields.get(i);
@@ -447,10 +449,10 @@ public class HiveDefaultRecordReader extends AbstractRecordReader {
     closeMapredReader();
   }
 
-  private static Deserializer createDeserializer(JobConf job, StorageDescriptor sd, Properties properties) throws Exception {
+  private static Deserializer createDeserializer(JobConf job, StorageDescriptor sd, Properties hiveTableproperties, Properties partitionProperties) throws Exception {
     final Class<? extends Deserializer> c = Class.forName(sd.getSerdeInfo().getSerializationLib()).asSubclass(Deserializer.class);
     final Deserializer deserializer = c.getConstructor().newInstance();
-    deserializer.initialize(job, properties);
+    ((AbstractSerDe) deserializer).initialize(job, hiveTableproperties, partitionProperties);
 
     return deserializer;
   }
