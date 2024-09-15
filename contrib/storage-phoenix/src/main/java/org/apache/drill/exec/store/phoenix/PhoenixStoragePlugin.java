@@ -48,7 +48,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.tephra.shaded.com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSet;
 
 public class PhoenixStoragePlugin extends AbstractStoragePlugin {
 
